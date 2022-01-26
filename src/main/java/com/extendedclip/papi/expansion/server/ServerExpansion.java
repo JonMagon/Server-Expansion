@@ -37,13 +37,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +52,7 @@ public class ServerExpansion extends PlaceholderExpansion implements Cacheable, 
 	private final Runtime runtime = Runtime.getRuntime();
 	private Object craftServer;
 	private Field tps;
+	private Field tickTimes10s;
 	private String version;
 	private final String variant;
 
@@ -82,6 +81,7 @@ public class ServerExpansion extends PlaceholderExpansion implements Cacheable, 
 				craftServer = Class.forName("net.minecraft.server." + version + ".MinecraftServer").getMethod("getServer").invoke(null);
 			}
 			tps = craftServer.getClass().getField("recentTps");
+			tickTimes10s = craftServer.getClass().getField("tickTimes10s");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -114,6 +114,7 @@ public class ServerExpansion extends PlaceholderExpansion implements Cacheable, 
 	public void clear() {
 		craftServer = null;
 		tps = null;
+		tickTimes10s = null;
 		version = null;
 		dateFormats.clear();
 		
@@ -520,7 +521,33 @@ public class ServerExpansion extends PlaceholderExpansion implements Cacheable, 
 		return ChatColor.translateAlternateColorCodes('&', (mspt < 25.0) ? high : (mspt < 50.0) ? medium : low) + mspt;
 	}
 
+	private long[] tickTimes() {
+		if (version == null || craftServer == null || tickTimes10s == null) {
+			return null;
+		}
+		try {
+			Object ticksObject = tickTimes10s.get(craftServer);
+			return ((long[]) ticksObject.getClass().getDeclaredMethod("getTimes").invoke(ticksObject));
+		} catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	public String getMspt(String arg) {
+		if (arg == null || arg.isEmpty()) {
+			long[] times = tickTimes();
+			long min = Integer.MAX_VALUE;
+			long max = 0L;
+			long total = 0L;
+			for (long value : times) {
+				if (value > 0L && value < min) min = value;
+				if (value > max) max = value;
+				total += value;
+			}
+			return String.format("%.2f", ((double) total / (double) times.length) * 1.0E-6D);
+		}
+
 		int idx = 0;
 		boolean colored = false;
 
