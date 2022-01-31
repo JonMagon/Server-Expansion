@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Archiver-Version: Plexus Archiver
+Created-By: Apache Maven
+Built-By: jonmagon
+Build-Jdk: 16
+Specification-Title: PAPI-Expansion-Server
+Specification-Version: 2.6.0
+Implementation-Title: PAPI-Expansion-Server
+Implementation-Version: 2.6.0
+Implementation-Vendor-Id: com.extendedclip.papi.expansion.server
+
